@@ -1,0 +1,237 @@
+{% extends "layout.html" %}
+
+{% block title %}Invoices{% endblock %}
+
+{% block extra_css %}
+<style>
+    .btn-cancel {
+        color: #dc3545;
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+    }
+    .btn-cancel:hover {
+        color: #c82333;
+    }
+    .filter-form {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.25rem;
+        margin-bottom: 1rem;
+    }
+    .pagination {
+        justify-content: center;
+        margin-top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-5">Invoices</h1>
+    
+    <!-- Filtros -->
+    <div class="filter-form">
+        <form method="GET" class="row">
+            <div class="col-md-2">
+                <label>RUC Empresa</label>
+                <input type="text" name="empresa_ruc" value="{{ empresa_ruc }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <label>RUC Cliente</label>
+                <input type="text" name="cliente_ruc" value="{{ cliente_ruc }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <label>Fecha Desde</label>
+                <input type="date" name="fecha_desde" value="{{ fecha_desde }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <label>Fecha Hasta</label>
+                <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-search"></i> Filtrar
+                </button>
+                <a href="{{ url_for('invoices') }}" class="btn btn-secondary btn-sm ml-2">
+                    <i class="fas fa-times"></i> Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Botones de acción -->
+    <div class="mb-3">
+        <a href="{{ url_for('index') }}" class="btn btn-primary">Add New Invoice</a>
+        <a href="{{ url_for('export') }}" class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Export to XLSX
+        </a>
+    </div>
+
+    <!-- Tabla -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead class="thead-dark">
+                <tr>
+                    <th>ID</th>
+                    <th colspan="4">Empresa</th>
+                    <th colspan="3">Timbrado</th>
+                    <th colspan="4">Factura</th>
+                    <th colspan="4">Productos</th>
+                    <th colspan="4">Totales</th>
+                    <th colspan="2">Cliente</th>
+                    <th colspan="4">IVA</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+                <tr>
+                    <th></th>
+                    <!-- Empresa -->
+                    <th>Nombre</th>
+                    <th>RUC</th>
+                    <th>Dirección</th>
+                    <th>Teléfono</th>
+                    <!-- Timbrado -->
+                    <th>Número</th>
+                    <th>Inicio</th>
+                    <th>Fin</th>
+                    <!-- Factura -->
+                    <th>Número</th>
+                    <th>Fecha</th>
+                    <th>Caja</th>
+                    <th>IVA Inc.</th>
+                    <!-- Productos -->
+                    <th>Cantidad</th>
+                    <th>Detalle</th>
+                    <th>Subtotal</th>
+                    <th>Total</th>
+                    <!-- Totales -->
+                    <th>Cant. Art.</th>
+                    <th>Subtotal</th>
+                    <th>Total</th>
+                    <th>IVA Total</th>
+                    <!-- Cliente -->
+                    <th>Nombre</th>
+                    <th>RUC</th>
+                    <!-- IVA -->
+                    <th>0%</th>
+                    <th>5%</th>
+                    <th>10%</th>
+                    <th>Total</th>
+                    <!-- Estado y Acciones -->
+                    <th></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for invoice in invoices %}
+                <tr id="row-{{ invoice.get('_id', '') }}">
+                    <td>{{ invoice.get('_id', '') }}</td>
+                    <!-- Empresa -->
+                    <td>{{ invoice.get('empresa', {}).get('nombre', '') }}</td>
+                    <td>{{ invoice.get('empresa', {}).get('ruc', '') }}</td>
+                    <td>{{ invoice.get('empresa', {}).get('direccion', '') }}</td>
+                    <td>{{ invoice.get('empresa', {}).get('telefono', '') }}</td>
+                    <!-- Timbrado -->
+                    <td>{{ invoice.get('timbrado', {}).get('nro', '') }}</td>
+                    <td>{{ invoice.get('timbrado', {}).get('fecha_inicio_vigencia', '') }}</td>
+                    <td>{{ invoice.get('timbrado', {}).get('valido_hasta', '') }}</td>
+                    <!-- Factura -->
+                    <td>{{ invoice.get('factura', {}).get('contado_nro', '') }}</td>
+                    <td>{{ invoice.get('factura', {}).get('fecha', '') }}</td>
+                    <td>{{ invoice.get('factura', {}).get('caja_nro', '') }}</td>
+                    <td>{{ invoice.get('factura', {}).get('iva_incluido', '') }}</td>
+                    <!-- Productos -->
+                    <td>{{ invoice.get('productos', [])|length }}</td>
+                    <td>
+                        {% for producto in invoice.get('productos', []) %}
+                        {{ producto.get('articulo', '') }} ({{ producto.get('cantidad', '') }}x{{ producto.get('precio_unitario', '') }})<br>
+                        {% endfor %}
+                    </td>
+                    <td>{{ invoice.get('totales', {}).get('subtotal', '') }}</td>
+                    <td>{{ invoice.get('totales', {}).get('total_a_pagar', '') }}</td>
+                    <!-- Totales -->
+                    <td>{{ invoice.get('totales', {}).get('cantidad_articulos', '') }}</td>
+                    <td>{{ invoice.get('totales', {}).get('subtotal', '') }}</td>
+                    <td>{{ invoice.get('totales', {}).get('total_a_pagar', '') }}</td>
+                    <td>{{ invoice.get('totales', {}).get('total_iva', '') }}</td>
+                    <!-- Cliente -->
+                    <td>{{ invoice.get('cliente', {}).get('nombre', '') }}</td>
+                    <td>{{ invoice.get('cliente', {}).get('ruc', '') }}</td>
+                    <!-- IVA -->
+                    <td>{{ invoice.get('totales', {}).get('iva_0%', 0) }}</td>
+                    <td>{{ invoice.get('totales', {}).get('iva_5%', 0) }}</td>
+                    <td>{{ invoice.get('totales', {}).get('iva_10%', 0) }}</td>
+                    <td>{{ invoice.get('totales', {}).get('total_iva', 0) }}</td>
+                    <!-- Estado -->
+                    <td>{{ invoice.get('estado', 'pendiente') }}</td>
+                    <td>
+                        <button type="button" 
+                                class="btn-cancel" 
+                                onclick="cancelInvoice('{{ invoice.get('_id', '') }}')"
+                                title="Anular factura">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    <nav aria-label="Page navigation">
+        <ul class="pagination">
+            {% if page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('invoices', page=page-1, empresa_ruc=empresa_ruc, cliente_ruc=cliente_ruc, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta) }}">Anterior</a>
+            </li>
+            {% endif %}
+
+            {# Mostrar páginas cercanas a la actual #}
+            {% set start_page = [1, page-2]|max %}
+            {% set end_page = [total_pages, page+2]|min %}
+            
+            {% for p in range(start_page, end_page + 1) %}
+            <li class="page-item {{ 'active' if p == page else '' }}">
+                <a class="page-link" href="{{ url_for('invoices', page=p, empresa_ruc=empresa_ruc, cliente_ruc=cliente_ruc, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta) }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+
+            {% if page < total_pages %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('invoices', page=page+1, empresa_ruc=empresa_ruc, cliente_ruc=cliente_ruc, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta) }}">Siguiente</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function cancelInvoice(invoiceId) {
+    if (confirm('¿Está seguro que desea anular esta factura?')) {
+        fetch(`/invoice/cancel/${invoiceId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById(`row-${invoiceId}`).remove();
+            } else {
+                alert('Error al anular la factura');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al anular la factura');
+        });
+    }
+}
+</script>
+{% endblock %}

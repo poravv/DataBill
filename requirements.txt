@@ -1,0 +1,36 @@
+# Web Framework y dependencias
+Flask==2.2.3
+Werkzeug==2.2.3
+flask-cors==4.0.0
+Flask-WTF==1.1.1
+
+# API Documentation
+flasgger==0.9.7.1
+apispec==6.3.0
+marshmallow==3.20.1
+
+# Database
+pymongo==4.5.0
+motor==3.3.1
+
+# Image Processing & AI
+openai==0.28.1  # Esta es la versión que funciona con el modelo gpt-4o
+Pillow==10.0.0
+
+# Data Processing
+numpy==1.24.3  # Added specific version
+pandas==1.5.3  # Downgraded to stable version
+openpyxl==3.1.2
+python-dotenv==1.0.0
+
+# Utils
+python-dateutil==2.8.2
+requests==2.31.0
+urllib3==2.0.4
+certifi==2023.7.22
+chardet==5.2.0
+
+# Development
+pytest==7.4.2
+black==23.7.0
+flake8==6.1.0

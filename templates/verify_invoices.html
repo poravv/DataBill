@@ -1,0 +1,206 @@
+{% extends "layout.html" %}
+
+{% block title %}Verify Invoices{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table-responsive { overflow-x: auto; }
+    .action-buttons { white-space: nowrap; }
+    .form-control-sm {
+        height: calc(1.8em + 0.5rem + 2px);
+        padding: 0.375rem 0.75rem;
+        font-size: 0.9rem;
+        min-width: 150px;  /* Aumentado el ancho mínimo */
+    }
+    .edit-mode { display: none; }
+    .view-mode { display: table-cell; }
+    tr.editing .edit-mode { display: table-cell; }
+    tr.editing .view-mode { display: none; }
+    /* Mejorado el estilo de los campos editables */
+    tr.editing td {
+        background-color: #f8f9fa;
+        padding: 8px;
+    }
+    tr.editing .form-control-sm {
+        border: 2px solid #007bff;
+        border-radius: 4px;
+    }
+    tr.editing select.form-control-sm {
+        min-width: 120px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-3">Verificar Facturas Pendientes</h1>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Acciones</th>
+                    <th colspan="4">Empresa</th>
+                    <th colspan="3">Timbrado</th>
+                    <th colspan="4">Factura</th>
+                    <th colspan="4">Productos</th>
+                    <th colspan="4">Totales</th>
+                    <th colspan="2">Cliente</th>
+                    <th colspan="4">IVA</th>
+                    <th>Estado</th>
+                </tr>
+                <tr>
+                    <th></th>
+                    <!-- Empresa -->
+                    <th>Nombre</th>
+                    <th>RUC</th>
+                    <th>Dirección</th>
+                    <th>Teléfono</th>
+                    <!-- Timbrado -->
+                    <th>Número</th>
+                    <th>Inicio</th>
+                    <th>Fin</th>
+                    <!-- Factura -->
+                    <th>Número</th>
+                    <th>Fecha</th>
+                    <th>Caja</th>
+                    <th>IVA Inc.</th>
+                    <!-- Productos -->
+                    <th>Cantidad</th>
+                    <th>Detalle</th>
+                    <th>Subtotal</th>
+                    <th>Total</th>
+                    <!-- Totales -->
+                    <th>Cant. Art.</th>
+                    <th>Subtotal</th>
+                    <th>Total</th>
+                    <th>IVA Total</th>
+                    <!-- Cliente -->
+                    <th>Nombre</th>
+                    <th>RUC</th>
+                    <!-- IVA -->
+                    <th>0%</th>
+                    <th>5%</th>
+                    <th>10%</th>
+                    <th>Total</th>
+                    <!-- Estado -->
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for invoice in invoices %}
+                <tr id="invoice-{{ invoice.get('_id', '') }}">
+                    <!-- Columna de acciones con formulario -->
+                    <td>
+                        <div class="view-mode">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="enableEdit('invoice-{{ invoice.get('_id', '') }}')">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                        </div>
+                        <form method="POST" action="{{ url_for('verify_invoices') }}" class="edit-mode">
+                            <input type="hidden" name="invoice_id" value="{{ invoice.get('_id', '') }}">
+                            <button type="submit" class="btn btn-success btn-sm mb-1">
+                                <i class="fas fa-save"></i> Guardar
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="cancelEdit('invoice-{{ invoice.get('_id', '') }}')">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+
+                    <!-- Campos no editables -->
+                    <td>{{ invoice.get('empresa', {}).get('nombre', '') }}</td>
+                    <td>{{ invoice.get('empresa', {}).get('ruc', '') }}</td>
+                    <td>{{ invoice.get('empresa', {}).get('direccion', '') }}</td>
+                    <td>{{ invoice.get('empresa', {}).get('telefono', '') }}</td>
+                    
+                    <!-- Timbrado (editable) -->
+                    <td>
+                        <span class="view-mode">{{ invoice.get('timbrado', {}).get('nro', '') }}</span>
+                        <input type="text" name="timbrado_nro" value="{{ invoice.get('timbrado', {}).get('nro', '') }}" 
+                               class="form-control form-control-sm edit-mode">
+                    </td>
+                    <td>
+                        <span class="view-mode">{{ invoice.get('timbrado', {}).get('fecha_inicio_vigencia', '') }}</span>
+                        <input type="text" name="timbrado_inicio" value="{{ invoice.get('timbrado', {}).get('fecha_inicio_vigencia', '') }}" 
+                               class="form-control form-control-sm edit-mode">
+                    </td>
+                    <td>
+                        <span class="view-mode">{{ invoice.get('timbrado', {}).get('valido_hasta', '') }}</span>
+                        <input type="text" name="timbrado_fin" value="{{ invoice.get('timbrado', {}).get('valido_hasta', '') }}" 
+                               class="form-control form-control-sm edit-mode">
+                    </td>
+                    
+                    <!-- Número de factura editable -->
+                    <td>
+                        <span class="view-mode">{{ invoice.get('factura', {}).get('contado_nro', '') }}</span>
+                        <input type="text" name="factura_nro" 
+                               value="{{ invoice.get('factura', {}).get('contado_nro', '') }}" 
+                               class="form-control form-control-sm edit-mode">
+                    </td>
+                    <td>
+                        <span class="view-mode">{{ invoice.get('factura', {}).get('fecha', '') }}</span>
+                        <input type="text" name="factura_fecha" value="{{ invoice.get('factura', {}).get('fecha', '') }}" 
+                               class="form-control form-control-sm edit-mode">
+                    </td>
+                    <td>{{ invoice.get('factura', {}).get('caja_nro', '') }}</td>
+                    <td>{{ invoice.get('factura', {}).get('iva_incluido', '') }}</td>
+                    
+                    <!-- Productos y totales -->
+                    <td>{{ invoice.get('productos', [])|length }}</td>
+                    <td>
+                        {% for producto in invoice.get('productos', []) %}
+                            {{ producto.get('articulo', '') }} ({{ producto.get('cantidad', 0) }}x{{ producto.get('precio_unitario', 0) }})<br>
+                        {% endfor %}
+                    </td>
+                    <td>{{ invoice.get('totales', {}).get('subtotal', '') }}</td>
+                    <td>{{ invoice.get('totales', {}).get('total_a_pagar', '') }}</td>
+                    <td>{{ invoice.get('totales', {}).get('cantidad_articulos', '') }}</td>
+                    <td>{{ invoice.get('totales', {}).get('subtotal', '') }}</td>
+                    <td>{{ invoice.get('totales', {}).get('total_a_pagar', '') }}</td>
+                    <td>{{ invoice.get('totales', {}).get('total_iva', '') }}</td>
+                    <!-- Cliente -->
+                    <td>{{ invoice.get('cliente', {}).get('nombre', '') }}</td>
+                    <td>{{ invoice.get('cliente', {}).get('ruc', '') }}</td>
+                    <!-- IVA -->
+                    <td>{{ invoice.get('totales', {}).get('iva_0%', 0) }}</td>
+                    <td>{{ invoice.get('totales', {}).get('iva_5%', 0) }}</td>
+                    <td>{{ invoice.get('totales', {}).get('iva_10%', 0) }}</td>
+                    <td>{{ invoice.get('totales', {}).get('total_iva', 0) }}</td>
+                    <!-- Estado editable -->
+                    <td>
+                        <span class="view-mode">{{ invoice.get('estado', 'pendiente') }}</span>
+                        <select name="estado" class="form-control form-control-sm edit-mode">
+                            <option value="pendiente" {% if invoice.get('estado') == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                            <option value="procesado" {% if invoice.get('estado') == 'procesado' %}selected{% endif %}>Procesado</option>
+                        </select>
+                    </td>
+                    </form>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function enableEdit(id) {
+    // Desactivar modo edición en todas las filas
+    document.querySelectorAll('tr').forEach(row => {
+        row.classList.remove('editing');
+    });
+    // Activar modo edición solo en la fila seleccionada
+    document.getElementById(id).classList.add('editing');
+}
+
+function cancelEdit(id) {
+    document.getElementById(id).classList.remove('editing');
+}
+
+// Prevenir envío accidental del formulario al presionar Enter
+$(document).ready(function() {
+    $('form').on('keypress', function(e) {
+        return e.which !== 13;
+    });
+});
+</script>
+{% endblock %}

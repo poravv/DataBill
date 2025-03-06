@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+
+{% block title %}Invoice System - Home{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <h1 class="display-4">Sistema de Procesamiento de Facturas</h1>
+            <p class="lead">Automatiza la extracción y verificación de datos de tus facturas usando IA</p>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-upload text-primary"></i> Subir Facturas
+                    </h5>
+                    <p class="card-text">Sube imágenes de tus facturas y nuestro sistema utilizará IA para extraer automáticamente todos los datos relevantes.</p>
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">Subir Factura</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-check-double text-success"></i> Verificación
+                    </h5>
+                    <p class="card-text">Revisa y verifica los datos extraídos. Puedes editar la información para asegurar su precisión antes de procesarla.</p>
+                    <a href="{{ url_for('verify_invoices') }}" class="btn btn-success">Verificar Facturas</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-table text-info"></i> Ver Todas
+                    </h5>
+                    <p class="card-text">Accede a todas tus facturas procesadas y exporta los datos a Excel para análisis adicional.</p>
+                    <a href="{{ url_for('invoices') }}" class="btn btn-info">Ver Facturas</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">¿Cómo funciona?</h5>
+                    <ol class="card-text">
+                        <li>Sube una imagen clara de tu factura</li>
+                        <li>El sistema procesará automáticamente la imagen usando IA</li>
+                        <li>Verifica y edita los datos extraídos si es necesario</li>
+                        <li>Los datos quedarán almacenados y disponibles para exportar</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
