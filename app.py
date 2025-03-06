@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, flash
 from flask_wtf import FlaskForm
 from wtforms import FileField, SubmitField, StringField
 from wtforms.validators import DataRequired
@@ -231,12 +231,8 @@ def create_app():
                         if key not in result_json:
                             result_json[key] = default_value
 
-                    # Crear instancia de Invoice y guardar en MongoDB
-                    invoice = Invoice(result_json)
-                    invoice_id = invoice.save_to_mongo()
-                    result_json['_id'] = invoice_id
-
-                    return render_template('result.html', result=result_json)
+                    # En lugar de guardar directamente, enviar a la página de edición
+                    return render_template('edit_result.html', result=result_json)
 
                 except json.JSONDecodeError:
                     return jsonify({"error": "Invalid JSON response from OpenAI"}), 500
@@ -759,6 +755,32 @@ def create_app():
             return jsonify(invoices)
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
+    # Nueva ruta para guardar la factura después de editar
+    @app.route('/save_invoice', methods=['POST'])
+    def save_invoice():
+        try:
+            # Obtener los datos JSON editados
+            invoice_data = request.form.get('invoice_data')
+            if not invoice_data:
+                return jsonify({"error": "No data provided"}), 400
+
+            # Parsear y validar el JSON
+            invoice_json = json.loads(invoice_data)
+            
+            # Crear instancia de Invoice y guardar en MongoDB
+            invoice = Invoice(invoice_json)
+            invoice_id = invoice.save_to_mongo()
+            
+            flash('Factura guardada exitosamente', 'success')
+            return redirect(url_for('invoices'))
+
+        except json.JSONDecodeError:
+            flash('Error: JSON inválido', 'error')
+            return redirect(url_for('index'))
+        except Exception as e:
+            flash(f'Error al guardar la factura: {str(e)}', 'error')
+            return redirect(url_for('index'))
 
     return app
 

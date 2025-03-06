@@ -1,0 +1,83 @@
+{% extends "layout.html" %}
+
+{% block title %}Edit Invoice Data{% endblock %}
+
+{% block extra_css %}
+<style>
+    .json-editor {
+        font-family: monospace;
+        font-size: 14px;
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        border: 1px solid #dee2e6;
+        min-height: 300px;
+    }
+    .validation-error {
+        color: #dc3545;
+        margin-top: 10px;
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mt-4">Review and Edit Invoice Data</h1>
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> Revisa y edita los datos antes de guardar
+    </div>
+    
+    <form id="editForm" method="POST" action="{{ url_for('save_invoice') }}">
+        <div class="form-group">
+            <label for="jsonEditor">JSON Data:</label>
+            <div id="jsonEditor" class="json-editor" contenteditable="true">{{ result | tojson(indent=2) }}</div>
+            <input type="hidden" name="invoice_data" id="hiddenJson">
+            <div id="validationError" class="validation-error">
+                <i class="fas fa-exclamation-circle"></i> Invalid JSON format
+            </div>
+        </div>
+        
+        <div class="mt-3 mb-5">
+            <button type="submit" class="btn btn-success" onclick="return validateAndSubmit()">
+                <i class="fas fa-save"></i> Save to Database
+            </button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function validateAndSubmit() {
+    const jsonEditor = document.getElementById('jsonEditor');
+    const hiddenInput = document.getElementById('hiddenJson');
+    const errorDiv = document.getElementById('validationError');
+    
+    try {
+        // Intentar parsear el JSON para validarlo
+        const jsonData = JSON.parse(jsonEditor.innerText);
+        hiddenInput.value = JSON.stringify(jsonData);
+        errorDiv.style.display = 'none';
+        return true;
+    } catch (e) {
+        errorDiv.style.display = 'block';
+        return false;
+    }
+}
+
+// Formatear el JSON al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    const jsonEditor = document.getElementById('jsonEditor');
+    try {
+        const formatted = JSON.stringify(JSON.parse(jsonEditor.innerText), null, 2);
+        jsonEditor.innerText = formatted;
+    } catch (e) {
+        console.error('Error formatting JSON:', e);
+    }
+});
+</script>
+{% endblock %}
