@@ -121,8 +121,26 @@ def create_app():
             with open(filepath, "rb") as image_file:
                 image_data = base64.b64encode(image_file.read()).decode('utf-8')
 
-            # Modificar el prompt para obtener la estructura deseada
-            prompt_text = """Extrae los datos de esta factura y devuélvelos en un JSON con exactamente esta estructura:
+            # Modificar el prompt para ser más flexible y descriptivo
+            prompt_text = """Analiza cuidadosamente esta imagen de factura y extrae todos los datos relevantes. 
+            Ten en cuenta que:
+            1. La factura puede estar en formato vertical u horizontal
+            2. Algunos campos pueden estar escritos a mano
+            3. El orden y posición de los campos puede variar
+            4. Algunos campos pueden estar ausentes o tener nombres ligeramente diferentes
+            
+            Busca específicamente:
+            - Información de la empresa: nombre completo, RUC, dirección y teléfono (pueden estar en el encabezado o pie)
+            - Datos del timbrado: número, fechas de vigencia (suelen estar en la parte superior)
+            - Número de factura y fecha (pueden estar en cualquier parte superior)
+            - Productos/servicios: descripción, cantidad, precio unitario y total
+            - Totales: subtotal, IVA (discriminado en 0%, 5%, 10%), total a pagar
+            - Información del cliente: nombre y RUC (pueden estar al inicio o al final)
+            
+            Si encuentras campos escritos a mano, intenta interpretarlos lo mejor posible.
+            Si no puedes leer algo con certeza, déjalo en blanco.
+            
+            Devuelve los datos en este formato JSON exacto:
             {
                 "empresa": {
                     "nombre": "",
@@ -163,10 +181,10 @@ def create_app():
                 }
             }"""
 
-            # Hacer la petición a GPT-4 Vision para analizar la imagen
+            # Hacer la petición a GPT-4 Vision
             try:
                 response = openai.ChatCompletion.create(
-                    model="gpt-4o",  # Usar el modelo correcto
+                    model="gpt-4o",
                     messages=[
                         {
                             "role": "user",
@@ -179,7 +197,8 @@ def create_app():
                             ],
                         }
                     ],
-                    max_tokens=1000
+                    max_tokens=1000,
+                    temperature=0.3  # Reducido para mayor precisión
                 )
 
                 result = response.choices[0].message.content
