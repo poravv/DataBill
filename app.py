@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, flash
+from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, flash, session
 from flask_wtf import FlaskForm
 from wtforms import FileField, SubmitField, StringField
 from wtforms.validators import DataRequired
@@ -16,6 +16,8 @@ from flasgger import Swagger, swag_from
 from src.infrastructure.config.swagger_config import configure_swagger
 from src.infrastructure.rest.api_controllers import api
 from flask_cors import CORS
+from src.infrastructure.storage.minio_client import MinioClient
+import mimetypes
 
 # Cargar variables de entorno
 load_dotenv()
@@ -47,6 +49,9 @@ def create_app():
     mongo_client = MongoClient(mongo_uri)
     db = mongo_client[os.getenv('MONGODB_DB')]
     collection = db[os.getenv('MONGODB_COLLECTION')]
+
+    # Inicializar Minio Client
+    minio_client = MinioClient()
 
     # Formulario de subida
     class UploadForm(FlaskForm):
@@ -101,23 +106,43 @@ def create_app():
     def index():
         form = UploadForm()
         if form.validate_on_submit():
-            image = form.image.data
-            filename = secure_filename(image.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            image.save(filepath)
-            return redirect(url_for('process_image', filename=filename))
+            try:
+                image = form.image.data
+                original_filename = secure_filename(image.filename)
+                # Generar nuevo nombre con timestamp
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f"{timestamp}_{original_filename}"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                image.save(filepath)
+                
+                # Intentar subir a Minio
+                minio_data = None
+                if minio_client.is_connected:
+                    minio_data = minio_client.upload_file(filepath, filename)
+                
+                # Guardar referencia a la imagen en el proceso
+                session['current_upload'] = {
+                    'local_path': filepath,
+                    'minio_data': minio_data
+                }
+                
+                return redirect(url_for('process_image', filename=filename))
+            except Exception as e:
+                flash(f'Error al procesar la imagen: {str(e)}', 'error')
+                return redirect(url_for('index'))
+                
         return render_template('index.html', form=form)
 
     # Procesar la imagen con OpenAI Vision
     @app.route('/process/<filename>')
     def process_image(filename):
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-
-        if not os.path.exists(filepath):
+        upload_data = session.get('current_upload', {})
+        filepath = upload_data.get('local_path')
+        
+        if not filepath or not os.path.exists(filepath):
             return jsonify({"error": "File not found"}), 404
 
         try:
-            # Abrir la imagen en modo binario y codificarla en base64
             with open(filepath, "rb") as image_file:
                 image_data = base64.b64encode(image_file.read()).decode('utf-8')
 
@@ -231,6 +256,13 @@ def create_app():
                         if key not in result_json:
                             result_json[key] = default_value
 
+                    # Agregar datos de Minio al resultado
+                    if upload_data.get('minio_data'):
+                        result_json['image_storage'] = upload_data['minio_data']
+
+                    # Limpiar la sesión
+                    session.pop('current_upload', None)
+
                     # En lugar de guardar directamente, enviar a la página de edición
                     return render_template('edit_result.html', result=result_json)
 
@@ -280,8 +312,17 @@ def create_app():
 
         formatted_invoices = []
         for invoice in invoices:
+            # Agregar imagen_data del almacenamiento
+            image_data = None
+            if 'image_storage' in invoice:
+                image_data = {
+                    'storage': invoice['image_storage'],
+                    'url': minio_client.get_file_url(invoice['image_storage']['object_name']) if minio_client.is_connected else None
+                }
+
             formatted_invoice = {
                 '_id': str(invoice['_id']),
+                'image_data': image_data,  # Agregar imagen_data al diccionario
                 'empresa': {
                     'nombre': invoice.get('empresa', {}).get('nombre', ''),
                     'ruc': invoice.get('empresa', {}).get('ruc', ''),
@@ -760,27 +801,50 @@ def create_app():
     @app.route('/save_invoice', methods=['POST'])
     def save_invoice():
         try:
-            # Obtener los datos JSON editados
             invoice_data = request.form.get('invoice_data')
             if not invoice_data:
                 return jsonify({"error": "No data provided"}), 400
 
-            # Parsear y validar el JSON
             invoice_json = json.loads(invoice_data)
             
-            # Crear instancia de Invoice y guardar en MongoDB
+            # Agregar la URL de la imagen si existe en la sesión
+            if 'current_upload' in session and session['current_upload'].get('minio_data'):
+                minio_data = session['current_upload']['minio_data']
+                # Generar URL presignada y guardarla en el documento
+                if minio_client.is_connected:
+                    image_url = minio_client.get_file_url(minio_data['object_name'])
+                    if image_url:
+                        invoice_json['image_data'] = {
+                            'storage': minio_data,
+                            'url': image_url,
+                            'uploaded_at': datetime.utcnow().isoformat()
+                        }
+
             invoice = Invoice(invoice_json)
             invoice_id = invoice.save_to_mongo()
             
+            # Limpiar la sesión
+            session.pop('current_upload', None)
+            
             flash('Factura guardada exitosamente', 'success')
             return redirect(url_for('invoices'))
-
-        except json.JSONDecodeError:
-            flash('Error: JSON inválido', 'error')
-            return redirect(url_for('index'))
         except Exception as e:
             flash(f'Error al guardar la factura: {str(e)}', 'error')
             return redirect(url_for('index'))
+
+    @app.route('/image/<invoice_id>')
+    def get_invoice_image(invoice_id):
+        try:
+            invoice = collection.find_one({'_id': ObjectId(invoice_id)})
+            if invoice and invoice.get('image_storage'):
+                storage_data = invoice['image_storage']
+                if minio_client.is_connected:
+                    url = minio_client.get_file_url(storage_data['object_name'])
+                    if url:
+                        return redirect(url)
+            return jsonify({"error": "Image not found"}), 404
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     return app
 

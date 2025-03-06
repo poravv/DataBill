@@ -7,6 +7,7 @@ Sistema de procesamiento de facturas utilizando OpenAI Vision para extracción a
 - Python 3.11+
 - MongoDB
 - OpenAI API Key
+- Minio Server (para almacenamiento de imágenes)
 
 ## Configuración
 
@@ -25,11 +26,26 @@ pip install -r requirements.txt
 3. Configurar variables de entorno:
 Crear archivo `.env`:
 ```env
+# OpenAI y Flask
 OPENAI_API_KEY=your_key
 SECRET_KEY=your_secret
+
+# MongoDB
 MONGO_URI=your_mongo_uri
 MONGODB_DB=dbinvoice
 MONGODB_COLLECTION=invoices
+
+# Minio Storage
+MINIO_ENDPOINT=localhost:9000
+MINIO_ACCESS_KEY=your_access_key
+MINIO_SECRET_KEY=your_secret_key
+MINIO_SECURE=False
+MINIO_BUCKET=invoices
+```
+
+4. Iniciar Minio Server:
+```bash
+docker run -p 9000:9000 -p 9001:9001 minio/minio server /data --console-address ":9001"
 ```
 
 ## Ejecución
@@ -67,6 +83,14 @@ Swagger UI disponible en `http://localhost:5000/docs`
 - Respuestas en formato JSON
 - Manejo de errores estandarizado
 - Interfaz Swagger UI para pruebas
+
+## Almacenamiento
+
+El sistema utiliza Minio como servidor de almacenamiento de objetos:
+- Las imágenes de facturas se almacenan en Minio
+- Accesible a través del endpoint configurado
+- Interfaz web de administración en puerto 9001
+- Bucket automáticamente creado al iniciar la aplicación
 
 ### Uso del Sistema
 1. **Web UI**: Accede a http://localhost:5000
